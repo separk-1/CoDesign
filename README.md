@@ -3,11 +3,6 @@
 
 ---
 
-## 🔗 Live Demo
-**Vercel:** https://codesign-six.vercel.app/
-
----
-
 ## 🚀 Setup & Run
 
 ### 1. Create and activate a virtual environment
@@ -29,9 +24,18 @@ conda activate codesign
 pip install -r requirements.txt
 ```
 
-### 3. Run
-Open **`index.html`** directly in your browser.  
-(No server required — it runs locally.)
+### 3. Configure environment (optional)
+You can create a `.env` file by copying the `.env.example` to set environment variables like `PORT`.
+
+### 4. Run the Server
+The application now uses a client-server architecture. Run the Flask server:
+```bash
+python app.py
+```
+The server will start, typically on `http://127.0.0.1:5000`.
+
+### 5. Open in Browser
+Navigate to the server's address in your web browser to use the application.
 
 ---
 
