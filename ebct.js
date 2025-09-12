@@ -1,47 +1,64 @@
-// --- UI wiring ---
-const $q = document.getElementById('q');
-const $go = document.getElementById('go');
-const $out = document.getElementById('out');
+document.addEventListener('DOMContentLoaded', () => {
+  const $q = document.getElementById('q');
+  const $go = document.getElementById('go');
+  const $out = document.getElementById('out');
 
-$go.onclick = async () => {
-  const query = $q.value;
-  if (!query) {
-    $out.textContent = 'Please enter a query.';
+  if (!$q || !$go || !$out) {
+    console.error('Missing #q, #go or #out element');
     return;
   }
 
-  $out.textContent = 'Calculating...';
-  $go.disabled = true;
+  $go.addEventListener('click', async (e) => {
+    e.preventDefault();
 
-  try {
-    const response = await fetch('/api/calculate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query }),
-    });
+    const query = $q.value;
+    if (!query) {
+      $out.textContent = 'Please enter a query.';
+      return;
+    }
 
-    const result = await response.json();
+    $out.textContent = 'Calculating...';
+    $go.disabled = true;
 
-    if (response.ok) {
-      const mins = result.minutes.toFixed(2);
-      $out.textContent =
-`EBCT ≈ ${mins} minutes
+    try {
+      const response = await fetch('/api/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+      const result = await response.json();
+
+      if (response.ok) {
+        const mins = String(result.minutes);
+        $out.textContent =
+`EBCT = ${mins} minutes
 Calculation based on: ${result.via}
 
-Inputs:
+Inputs (raw parse):
 ${JSON.stringify(result.detail.inputs, null, 2)}
 
+Normalized units / intermediates:
+${JSON.stringify(result.detail.units_normalized || {}, null, 2)}
+
+Constants:
+${JSON.stringify(result.detail.constants || {}, null, 2)}
+
 Formula:
-${result.detail.formula}`;
-    } else {
-      $out.textContent = `Error: ${result.error}\n\n${result.need ? 'Missing information: ' + result.need.join(' · ') : ''}`;
+${result.detail.formula}
+
+Derivation:
+${result.detail.explanation}
+
+Trace:
+${JSON.stringify(result.detail.trace || {}, null, 2)}`;
+      } else {
+        $out.textContent = `Error: ${result.error}\n\n${result.need ? 'Missing information: ' + result.need.join(' · ') : ''}`;
+      }
+    } catch (err) {
+      console.error(err);
+      $out.textContent = 'Request failed. Open Console for details.';
+    } finally {
+      $go.disabled = false;
     }
-  } catch (err) {
-    console.error('Fetch error:', err);
-    $out.textContent = 'An unexpected error occurred. Please check the console and make sure the server is running.';
-  } finally {
-    $go.disabled = false;
-  }
-};
+  });
+});

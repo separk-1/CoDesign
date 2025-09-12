@@ -1,10 +1,8 @@
 import re
 import math
 from typing import List, Optional, Dict, Any
-
 from pydantic import BaseModel
 
-# --- Constants ---
 GAL_PER_FT3 = 7.48052
 GAL_PER_M3 = 264.172
 FT_PER_M = 3.28084
@@ -24,9 +22,7 @@ class CalculationResult(BaseModel):
 
 def match_num_unit(pattern: str, text: str) -> List[MatchedUnit]:
     matches = []
-    # Using re.finditer to find all non-overlapping matches
     for match in re.finditer(pattern, text, re.IGNORECASE):
-        # Extracting the number and unit from the match
         matches.append(MatchedUnit(v=float(match.group(1)), u=match.group(3).lower(), i=match.start()))
     return matches
 
@@ -61,67 +57,67 @@ def to_feet(val: float, unit: str) -> float:
         return val / 12
     if unit == 'm':
         return val * FT_PER_M
+    if unit == 'cm':
+        return (val / 100.0) * FT_PER_M
     return val
 
 def compute_ebct(input_text: str) -> Dict[str, Any]:
-    # Parsing for flow rate
     flow_match = match_num_unit(r"(\d+(\.\d+)?)\s*(gpm|l/min|lpm|m3/h|m³/h)", input_text)
     flow = flow_match[0] if flow_match else None
-
-    # Parsing for volume
-    vol_match = match_num_unit(r"(\d+(\.\d+)?)\s*(gal|ft3|ft³|m3|m³)", input_text)
-    vol = vol_match[0] if vol_match else None
-
-    # Parsing for dimensions
-    dims_match = match_num_unit(r"(\d+(\.\d+)?)\s*(ft|m|in)", input_text)
-    
+    vol_match = match_num_unit(r"(\d+(\.\d+)?)\s*(gal|ft3|ft³|m3|m³)(?!/)", input_text)
+    vol = vol_match[-1] if vol_match else None
+    dims_match = match_num_unit(r"(\d+(\.\d+)?)\s*(ft|m|in|cm)", input_text)
     gpm = to_gpm(flow)
+    trace = {'raw': input_text, 'matches': {'flow': [m.dict() for m in flow_match] if flow_match else [], 'volume': [m.dict() for m in vol_match] if vol_match else [], 'dims': [m.dict() for m in dims_match]}}
 
-    # Path 1: Direct calculation from Volume and Flow
     if vol and gpm:
         gal = to_gal(vol)
         if gal:
             minutes = gal / gpm
+            explanation = f"EBCT(min) = Volume(gal) / Flow(gal/min)\n= {gal} / {gpm}\n= {minutes} minutes"
             result = CalculationResult(
                 ok=True,
                 via='volume+flow',
                 minutes=minutes,
                 detail={
                     'inputs': {'flow': flow.dict(), 'volume': vol.dict()},
-                    'formula': 'EBCT(min) = Volume(gal) / Flow(gal/min)'
+                    'units_normalized': {'volume_gal': gal, 'flow_gpm': gpm},
+                    'constants': {'GAL_PER_FT3': GAL_PER_FT3, 'GAL_PER_M3': GAL_PER_M3},
+                    'formula': 'EBCT(min) = V(gal) / Q(gal/min)',
+                    'explanation': explanation,
+                    'trace': trace
                 }
             )
             return result.dict()
 
-    # Path 2: Calculation from Dimensions and Flow (assuming a cylindrical vessel)
     if len(dims_match) >= 2 and gpm:
         d_val, d_unit = dims_match[0].v, dims_match[0].u
         h_val, h_unit = dims_match[1].v, dims_match[1].u
-        
         D_ft = to_feet(d_val, d_unit)
         H_ft = to_feet(h_val, h_unit)
-        
         ft3 = PI * (D_ft / 2) ** 2 * H_ft
         gal = ft3 * GAL_PER_FT3
         minutes = gal / gpm
-        
+        explanation = f"V(ft^3) = π * (D/2)^2 * H = {PI} * ({D_ft}/2)^2 * {H_ft} = {ft3} ft^3\nVolume(gal) = {ft3} * {GAL_PER_FT3} = {gal} gal\nEBCT(min) = {gal} / {gpm} = {minutes} minutes"
         result = CalculationResult(
             ok=True,
             via='dims+flow (assume cylinder)',
             minutes=minutes,
             detail={
-                'inputs': {'flow': flow.dict(), 'D_ft': D_ft, 'H_ft': H_ft},
-                'formula': 'V(ft³)=π*(D/2)²*H; EBCT(min)=V(gal)/Flow(gpm); 1 ft³=7.48052 gal'
+                'inputs': {'flow': flow.dict(), 'D': {'v': d_val, 'u': d_unit}, 'H': {'v': h_val, 'u': h_unit}},
+                'units_normalized': {'D_ft': D_ft, 'H_ft': H_ft, 'ft3': ft3, 'volume_gal': gal, 'flow_gpm': gpm},
+                'constants': {'GAL_PER_FT3': GAL_PER_FT3, 'PI': PI},
+                'formula': 'V=π(D/2)^2H; EBCT=V(gal)/Q(gpm)',
+                'explanation': explanation,
+                'trace': trace
             }
         )
         return result.dict()
 
-    # If information is insufficient for calculation
     need = []
     if not gpm:
         need.append('Flow rate (e.g., 800 gpm, 3.5 m3/h)')
     if not vol and len(dims_match) < 2:
         need.append('Bed volume (e.g., 9600 gal) or tank dimensions (e.g., 10 ft diameter, 8 ft height)')
-        
     result = CalculationResult(ok=False, need=need)
     return result.dict()
