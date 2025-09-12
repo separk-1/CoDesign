@@ -44,6 +44,6 @@ def calculate_api():
 # Main entry point for running the app
 if __name__ == '__main__':
     # Use the PORT environment variable if available, otherwise default to 5000
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 5001))
     # Run the app, accessible from any network interface
     app.run(host='0.0.0.0', port=port, debug=True)
