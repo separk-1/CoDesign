@@ -1,11 +1,16 @@
 import os
 from flask import Flask, request, jsonify, send_from_directory
-from calculator import compute_ebct  # ← 여기! api. 접두사 빼기
+from calculator import compute_ebct
 
 app = Flask(__name__, static_folder='.')
 
+@app.get("/ping")
+def ping():
+    return "pong", 200
+
 @app.get("/")
 def index():
+    # repo 루트에 index.html이 반드시 있어야 합니다
     return send_from_directory(".", "index.html")
 
 @app.post("/api/calculate")
@@ -15,13 +20,10 @@ def calculate():
         query = (data.get("query") or "").strip()
         if not query:
             return jsonify({"ok": False, "error": "Missing 'query'"}), 400
-
-        result = compute_ebct(query)
-        return jsonify(result), 200
+        return jsonify(compute_ebct(query)), 200
     except Exception as e:
         print("[/api/calculate] error:", e)
         return jsonify({"ok": False, "error": "Internal Server Error"}), 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5001))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run("0.0.0.0", int(os.environ.get("PORT", 5001)), debug=True)
