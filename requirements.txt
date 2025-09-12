@@ -1,4 +1,4 @@
 flask
 python-dotenv
-Flask==2.0.1
-pydantic==1.8.2
+Flask
+pydantic
