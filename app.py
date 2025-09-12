@@ -10,14 +10,6 @@ app = Flask(__name__, static_folder='.')
 def index():
     return send_from_directory('.', 'index.html')
 
-# Route to serve other static files (like ebct.js)
-@app.route('/<path:path>')
-def static_files(path):
-    # To prevent directory traversal attacks, ensure the path is safe
-    if '..' in path or path.startswith('/'):
-        return "Not Found", 404
-    return send_from_directory('.', path)
-
 # API endpoint for the EBCT calculation
 @app.route('/api/calculate', methods=['POST'])
 def calculate_api():
