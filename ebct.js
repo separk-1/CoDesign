@@ -3,10 +3,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const $go = document.getElementById('go');
   const $out = document.getElementById('out');
 
-  if (!$q || !$go || !$out) {
-    console.error('Missing #q, #go or #out element');
-    return;
-  }
+  const esc = (s) =>
+    String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+  const fmtNum = (x) => {
+    if (typeof x !== 'number') return String(x);
+    if (Number.isInteger(x)) return String(x);
+    const s = String(x);
+    return s.includes('.') ? s.replace(/(\.\d*?[1-9])0+$/,'$1').replace(/\.$/,'') : s;
+  };
+
+  const block = (title, body) =>
+    `<details><summary>${esc(title)}</summary><pre>${body}</pre></details>`;
+
+  const j = (obj) => esc(JSON.stringify(obj, null, 2));
+
+  if (!$q || !$go || !$out) return;
 
   $go.addEventListener('click', async (e) => {
     e.preventDefault();
@@ -29,28 +44,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const result = await response.json();
 
       if (response.ok) {
-        const mins = String(result.minutes);
-        $out.textContent =
-`EBCT = ${mins} minutes
-Calculation based on: ${result.via}
+        const mins = Number(result.minutes).toFixed(4);
+        const top =
+`<div style="font-size:1.1rem;font-weight:600">EBCT = ${esc(mins)} minutes</div>
+<div style="margin:2px 0 8px 0;color:#555">Based on: ${esc(result.via || '')}</div>`;
 
-Inputs (raw parse):
-${JSON.stringify(result.detail.inputs, null, 2)}
+        const inputs = block('Inputs (raw parse)', j(result.detail?.inputs || {}));
+        const normalized = block('Normalized units / intermediates', j(result.detail?.units_normalized || {}));
+        const constants = block('Constants', j(result.detail?.constants || {}));
+        const formula = block('Formula', esc(result.detail?.formula || ''));
+        const deriv = block('Derivation', esc(result.detail?.explanation || ''));
+        const trace = block('Trace', j(result.detail?.trace || {}));
 
-Normalized units / intermediates:
-${JSON.stringify(result.detail.units_normalized || {}, null, 2)}
-
-Constants:
-${JSON.stringify(result.detail.constants || {}, null, 2)}
-
-Formula:
-${result.detail.formula}
-
-Derivation:
-${result.detail.explanation}
-
-Trace:
-${JSON.stringify(result.detail.trace || {}, null, 2)}`;
+        $out.innerHTML = top + inputs + normalized + constants + formula + deriv + trace;
       } else {
         $out.textContent = `Error: ${result.error}\n\n${result.need ? 'Missing information: ' + result.need.join(' · ') : ''}`;
       }
