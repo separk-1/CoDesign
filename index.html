@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>EngSync — EBCT MVP</title>
@@ -12,12 +12,12 @@
   pre { background: #f6f8fa; padding: 12px; border-radius: 8px; overflow-x: auto; }
   .hint { color: #555; font-size: 14px; margin: 8px 0 0; }
 </style>
-<h1>EBCT 계산 (초간단 MVP)</h1>
-<p class="hint">예) <code>EBCT? 유량 800 gpm, 베드 9600 gal</code> 또는 <code>지름 10 ft, 베드높이 8 ft, 유량 900 gpm</code></p>
+<h1>EBCT Calculation (MVP)</h1>
+<p class="hint">e.g., <code>EBCT? flow 800 gpm, bed volume 9600 gal</code> or <code>diameter 10 ft, bed height 8 ft, flow 900 gpm</code></p>
 <div class="row" style="margin:12px 0 16px;">
-  <input id="q" placeholder="자연어로 입력하세요…" />
-  <button id="go">계산</button>
+  <input id="q" placeholder="Enter query in natural language..." />
+  <button id="go">Calculate</button>
 </div>
-<pre id="out">결과가 여기에 표시됩니다</pre>
+<pre id="out">Results will be displayed here</pre>
 <script src="ebct.js"></script>
 </html>
