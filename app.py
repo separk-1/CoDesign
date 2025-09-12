@@ -10,7 +10,6 @@ def ping():
 
 @app.get("/")
 def index():
-    # repo 루트에 index.html이 반드시 있어야 합니다
     return send_from_directory(".", "index.html")
 
 @app.post("/api/calculate")

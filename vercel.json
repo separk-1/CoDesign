@@ -4,6 +4,6 @@
   "routes": [
     { "src": "^/ping$", "dest": "app.py" },
     { "src": "^/api/calculate/?$", "dest": "app.py" },
-    { "src": "^/$", "dest": "app.py" }
+    { "src": "^/(index\\.html)?$", "dest": "app.py" }
   ]
 }
