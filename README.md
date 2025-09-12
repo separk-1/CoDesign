@@ -4,7 +4,7 @@
 ---
 
 ## 🔗 Live Demo
-Vercel deployment: [codesign-six.vercel.app](https://codesign-six.vercel.app/)
+Vercel deployment: [codesign-six.vercel.app](https://codesign-eng.vercel.app)
 
 ---
 

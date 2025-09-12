@@ -1,6 +1,6 @@
 import os
 from flask import Flask, request, jsonify, send_from_directory
-from calculator import compute_ebct
+from calculator import compute_ebct 
 
 app = Flask(__name__, static_folder='.')
 
