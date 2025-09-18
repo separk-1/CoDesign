@@ -28,7 +28,7 @@ Copy `.env.example` to `.env` and set environment variables if needed (e.g., `PO
 python app.py
 ```
 
-The server will start at [http://127.0.0.1:5001](http://127.0.0.1:5001) by default【124†source】.
+The server will start at [http://127.0.0.1:5001](http://127.0.0.1:5001) by default.
 
 ### 5. Open the UI
 Open `index.html` in your browser, or simply navigate to the server root:
