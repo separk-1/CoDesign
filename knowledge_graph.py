@@ -98,6 +98,21 @@ def query_concept(graph: nx.DiGraph, user_msg: str) -> Optional[Tuple[str, str]]
         "Q": re.compile(r"(\bQ\b|flow|유량).*(뭐|what)|(Q|flow|유량)\s*가\s*뭐", re.I),
     }
 
+
+    # '...가 뭐야', '...의 뜻' 패턴 추가
+    patterns_to_add = {
+        "V": [r"(bed\s*volum.*)\s*(뭐|무엇|뜻)", r"(볼륨|체적)\s*(뭐|뜻)"],
+        "Q": [r"(flow|유량)\s*(뭐|뜻)"],
+        "EBCT": [r"ebct\s*(뭐|뜻)"],
+    }
+
+    for concept_name, regex_list in patterns_to_add.items():
+        for pattern in regex_list:
+            if re.search(pattern, user_msg, re.I):
+                node = graph.nodes.get(concept_name)
+                if node and node.get('type') == 'concept':
+                    return node.get('description'), node.get('rationale')
+
     for concept_name, pattern in patterns.items():
         if pattern.search(user_msg):
             node = graph.nodes.get(concept_name)

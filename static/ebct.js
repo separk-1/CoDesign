@@ -1,35 +1,76 @@
-// static/ebct.js (v14): persona + text-first
+// static/ebct.js (v17): persona + text-first + kg + markdown + loading (no bubble)
 document.addEventListener('DOMContentLoaded', () => {
   const $chat = document.getElementById('chat');
   const $q    = document.getElementById('q');
   const $send = document.getElementById('send');
   const $roleHint = document.getElementById('roleHint');
   const $roleBtns = document.querySelectorAll('.rolebtn');
+  const $dbBtn = document.getElementById('db-btn');
+  const $graphContainer = document.getElementById('graph-container');
 
   let state = { role: null, used: null };
   let messages = [];
+  
+  const converter = new showdown.Converter();
 
   const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const bubble = (role, html) => { const b=document.createElement('div'); b.className=`bubble ${role==='user'?'user':'bot'}`; b.innerHTML=html; $chat.appendChild(b); $chat.scrollTop=$chat.scrollHeight; return b; };
+  
+  const bubble = (role, text) => { 
+    const b = document.createElement('div'); 
+    b.className = `bubble ${role === 'user' ? 'user' : 'bot'}`; 
+    b.innerHTML = converter.makeHtml(text);
+    $chat.appendChild(b); 
+    $chat.scrollTop = $chat.scrollHeight; 
+    return b; 
+  };
+  
+  const plainText = (text, className) => {
+    const p = document.createElement('div');
+    p.className = className;
+    p.textContent = text;
+    $chat.appendChild(p);
+    $chat.scrollTop = $chat.scrollHeight;
+    return p;
+  };
 
-  // role select
-  $roleBtns.forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      state.role = btn.dataset.role; // 'designer' | 'engineer'
+  $roleBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.role = btn.dataset.role;
       $roleHint.textContent = state.role === 'designer' ? 'Designer mode – plain language, alternatives first.' : 'Engineer mode – numbers, units, assumptions.';
-      bubble('bot', state.role==='designer' ? '디자이너 모드로 도와드릴게요. 무엇이 걱정되세요?' : '엔지니어 모드입니다. 기준/가정부터 알려주세요.');
+      bubble('bot', state.role === 'designer' ? '디자이너 모드로 도와드릴게요. 무엇이 걱정되세요?' : '엔지니어 모드입니다. 기준/가정부터 알려주세요.');
       $q.focus();
     });
+  });
+
+  let graphVisible = false;
+  $dbBtn.addEventListener('click', async () => {
+    graphVisible = !graphVisible;
+    $dbBtn.setAttribute('aria-pressed', graphVisible);
+    
+    $chat.style.display = graphVisible ? 'none' : 'flex';
+    $graphContainer.style.display = graphVisible ? 'block' : 'none';
+
+    if (graphVisible) {
+      $q.placeholder = '그래프를 드래그하여 탐색하세요.';
+      renderGraph();
+    } else {
+      $q.placeholder = 'Ask a question…';
+    }
   });
 
   async function send() {
     const text = ($q.value || '').trim();
     if (!text) return;
-    if (!state.role) { bubble('bot','먼저 상단에서 역할을 선택해 주세요 (Designer / Engineer).'); return; }
+    if (!state.role) { 
+        bubble('bot', '먼저 상단에서 역할을 선택해 주세요 (Designer / Engineer).'); 
+        return; 
+    }
 
     $q.value = '';
     messages.push({ role: 'user', content: text });
     bubble('user', esc(text));
+
+    const loadingText = plainText('답변을 생성 중입니다...', 'loading-text');
 
     try {
       const res = await fetch('/api/chat', {
@@ -38,23 +79,141 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ messages, state })
       });
       const raw = await res.text();
-      let data; try { data = JSON.parse(raw); } catch { data = { reply: raw }; }
+      let data; 
+      try { data = JSON.parse(raw); } catch { data = { reply: raw }; }
 
-      if (!res.ok) { bubble('bot', `Error: ${esc(data.error || 'Server error')}`); return; }
+      loadingText.classList.add('fade-out');
+      loadingText.addEventListener('transitionend', () => {
+        loadingText.remove();
+      });
+
+      if (!res.ok) { 
+        bubble('bot', `Error: ${esc(data.error || 'Server error')}`); 
+        return; 
+      }
 
       const reply = data.reply || '(no reply)';
-      bubble('bot', esc(reply));
-      if (data.rationale) bubble('bot', `<span class="muted">${esc(data.rationale)}</span>`);
+      bubble('bot', reply);
+      if (data.rationale) {
+          const rationaleHtml = converter.makeHtml(data.rationale);
+          const rationaleBubble = document.createElement('div');
+          rationaleBubble.className = 'bubble bot';
+          rationaleBubble.innerHTML = `<span class="muted">${rationaleHtml}</span>`;
+          $chat.appendChild(rationaleBubble);
+          $chat.scrollTop = $chat.scrollHeight;
+      }
 
       if (data.calc && data.calc.used) state.used = data.calc.used;
       messages.push({ role: 'assistant', content: reply });
     } catch (e) {
-      console.error(e); bubble('bot', 'Request failed. See Console.');
+      loadingText.classList.add('fade-out');
+      loadingText.addEventListener('transitionend', () => {
+        loadingText.remove();
+      });
+      console.error(e); 
+      bubble('bot', 'Request failed. See Console.');
     }
   }
 
   $send.addEventListener('click', send);
   $q.addEventListener('keydown', (e)=>{ if(e.key==='Enter') send(); });
+
+  async function renderGraph() {
+    try {
+      const res = await fetch('/api/knowledge-graph');
+      if (!res.ok) throw new Error('Failed to fetch knowledge graph');
+      const graphData = await res.json();
+      
+      const width = $graphContainer.offsetWidth;
+      const height = $graphContainer.offsetHeight || 600;
+      const svg = d3.select("#knowledge-graph").html("").attr("width", width).attr("height", height);
+
+      const simulation = d3.forceSimulation(graphData.nodes)
+        .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(100))
+        .force("charge", d3.forceManyBody().strength(-300))
+        .force("center", d3.forceCenter(width / 2, height / 2));
+
+      const link = svg.append("g")
+        .attr("stroke", "#999")
+        .attr("stroke-opacity", 0.6)
+        .selectAll("line")
+        .data(graphData.links)
+        .join("line");
+
+      const node = svg.append("g")
+        .attr("stroke", "#fff")
+        .attr("stroke-width", 1.5)
+        .selectAll("circle")
+        .data(graphData.nodes)
+        .join("circle")
+        .attr("r", 8)
+        .attr("fill", d => {
+          if (d.type === 'concept') return '#2563eb';
+          if (d.type === 'risk') return '#dc2626';
+          if (d.type === 'advice') return '#facc15';
+          return '#64748b';
+        })
+        .call(d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended));
+
+      const text = svg.append("g")
+        .selectAll("text")
+        .data(graphData.nodes)
+        .join("text")
+        .attr("x", 12)
+        .attr("y", "0.31em")
+        .text(d => d.id)
+        .clone(true).lower()
+        .attr("stroke", "white");
+
+      simulation.on("tick", () => {
+        link
+          .attr("x1", d => d.source.x)
+          .attr("y1", d => d.source.y)
+          .attr("x2", d => d.target.x)
+          .attr("y2", d => d.target.y);
+        node
+          .attr("cx", d => d.x)
+          .attr("cy", d => d.y);
+        text
+          .attr("x", d => d.x + 12)
+          .attr("y", d => d.y);
+      });
+
+      function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      }
+
+      function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+      }
+
+      function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      }
+
+    } catch (e) {
+      console.error(e);
+      const svg = d3.select("#knowledge-graph");
+      const width = $graphContainer.offsetWidth;
+      const height = $graphContainer.offsetHeight || 600;
+      svg.html("").attr("width", width).attr("height", height);
+      svg.append("text")
+         .attr("x", width / 2)
+         .attr("y", height / 2)
+         .attr("text-anchor", "middle")
+         .attr("font-size", "16px")
+         .attr("fill", "#dc2626")
+         .text("Failed to load knowledge graph.");
+    }
+  }
 
   bubble('bot', "나는 디자이너/엔지니어 중 무엇인가요? 상단에서 선택해 주세요.\n기준 예) 'flow 800 gpm, bed volume 9600 gal'\n질문 예) '이거 10% 올려도 돼?', 'what flow for 15 min'");
 });
