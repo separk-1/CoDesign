@@ -1,19 +1,88 @@
 import networkx as nx
-import re
-from typing import Optional, Tuple
+import json
+import os
+from typing import Optional, Dict, Any, List
 
+GRAPH_FILE_PATH = "knowledge_graph.json"
 _G = None
 
 def get_graph():
     """Singleton accessor for the knowledge graph."""
     global _G
     if _G is None:
-        _G = create_knowledge_graph()
+        _G = load_graph()
     return _G
 
-def create_knowledge_graph():
+def load_graph() -> nx.DiGraph:
+    """Loads the graph from the JSON file, or creates a default one if the file doesn't exist."""
+    if os.path.exists(GRAPH_FILE_PATH):
+        try:
+            with open(GRAPH_FILE_PATH, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return nx.node_link_graph(data)
+        except (json.JSONDecodeError, nx.NetworkXError) as e:
+            print(f"Error loading graph from {GRAPH_FILE_PATH}: {e}. Creating a new default graph.", flush=True)
+            return create_default_knowledge_graph()
+    else:
+        print(f"Graph file not found at {GRAPH_FILE_PATH}. Creating a new default graph.", flush=True)
+        return create_default_knowledge_graph()
+
+def save_graph(graph: nx.DiGraph):
+    """Saves the graph to the JSON file."""
+    try:
+        data = nx.node_link_data(graph)
+        with open(GRAPH_FILE_PATH, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"Error saving graph to {GRAPH_FILE_PATH}: {e}", flush=True)
+
+def add_node(graph: nx.DiGraph, node_id: str, attributes: Dict[str, Any]) -> bool:
+    """Adds a new node to the graph and saves the graph."""
+    if graph.has_node(node_id):
+        return False  # Node already exists
+    graph.add_node(node_id, **attributes)
+    save_graph(graph)
+    return True
+
+def update_node(graph: nx.DiGraph, node_id: str, attributes: Dict[str, Any]) -> bool:
+    """Updates an existing node's attributes and saves the graph."""
+    if not graph.has_node(node_id):
+        return False # Node does not exist
+    for key, value in attributes.items():
+        graph.nodes[node_id][key] = value
+    save_graph(graph)
+    return True
+
+def delete_node(graph: nx.DiGraph, node_id: str) -> bool:
+    """Deletes a node from the graph and saves the graph."""
+    if not graph.has_node(node_id):
+        return False # Node does not exist
+    graph.remove_node(node_id)
+    save_graph(graph)
+    return True
+
+def add_edge(graph: nx.DiGraph, source: str, target: str, attributes: Dict[str, Any]) -> bool:
+    """Adds a new edge to the graph and saves the graph."""
+    if not graph.has_node(source) or not graph.has_node(target):
+        return False # Source or target node does not exist
+    if graph.has_edge(source, target):
+        return False # Edge already exists
+    graph.add_edge(source, target, **attributes)
+    save_graph(graph)
+    return True
+
+def delete_edge(graph: nx.DiGraph, source: str, target: str) -> bool:
+    """Deletes an edge from the graph and saves the graph."""
+    if not graph.has_edge(source, target):
+        return False # Edge does not exist
+    graph.remove_edge(source, target)
+    save_graph(graph)
+    return True
+
+def create_default_knowledge_graph() -> nx.DiGraph:
     """
-    Creates and populates the knowledge graph with concepts, risks, and advice.
+    Creates and populates the default knowledge graph with concepts, risks, and advice.
+    This is used if no existing graph file is found.
     """
     G = nx.DiGraph()
 
@@ -62,121 +131,14 @@ def create_knowledge_graph():
                designer="층 높이를 키우면 접촉시간은 늘지만 압력손실도 같이 늘 수 있어요. 펌프/세척 조건을 함께 확인하세요.",
                engineer="H↑ ⇒ V↑, ΔP↑. backwash expansion, pump head margin 확인.")
 
-
     # --- Edges ---
     G.add_edge("V", "V_risk", type="has_risk")
     G.add_edge("Q", "Q_risk", type="has_risk")
-
     G.add_edge("V", "V_advice", type="has_advice")
     G.add_edge("Q", "Q_advice", type="has_advice")
     G.add_edge("D", "D_advice", type="has_advice")
     G.add_edge("H", "H_advice", type="has_advice")
 
+    # Save the newly created default graph so it can be loaded next time
+    save_graph(G)
     return G
-
-
-# --- Query Functions ---
-
-def find_node_by_alias(graph: nx.DiGraph, alias: str) -> Optional[str]:
-    """Finds a node in the graph by its alias."""
-    for node, data in graph.nodes(data=True):
-        if 'aliases' in data and alias.lower() in data['aliases']:
-            return node
-    return None
-
-def query_concept(graph: nx.DiGraph, user_msg: str) -> Optional[Tuple[str, str]]:
-    """
-    Queries the graph for a concept based on the user's message.
-    Returns a tuple of (description, rationale) if a concept is found.
-    """
-    user_msg = user_msg.strip().lower()
-
-    # Simple regex for now, can be improved with NLP
-    patterns = {
-        "EBCT": re.compile(r"(ebct가\s*뭐|what\s*is\s*ebct)", re.I),
-        "V": re.compile(r"(\bV\b|volume|볼륨).*(뭐|what)|(V|volume|볼륨)\s*가\s*뭐", re.I),
-        "Q": re.compile(r"(\bQ\b|flow|유량).*(뭐|what)|(Q|flow|유량)\s*가\s*뭐", re.I),
-    }
-
-
-    # '...가 뭐야', '...의 뜻' 패턴 추가
-    patterns_to_add = {
-        "V": [r"(bed\s*volum.*)\s*(뭐|무엇|뜻)", r"(볼륨|체적)\s*(뭐|뜻)"],
-        "Q": [r"(flow|유량)\s*(뭐|뜻)"],
-        "EBCT": [r"ebct\s*(뭐|뜻)"],
-    }
-
-    for concept_name, regex_list in patterns_to_add.items():
-        for pattern in regex_list:
-            if re.search(pattern, user_msg, re.I):
-                node = graph.nodes.get(concept_name)
-                if node and node.get('type') == 'concept':
-                    return node.get('description'), node.get('rationale')
-
-    for concept_name, pattern in patterns.items():
-        if pattern.search(user_msg):
-            node = graph.nodes.get(concept_name)
-            if node and node.get('type') == 'concept':
-                return node.get('description'), node.get('rationale')
-
-    return None
-
-
-def query_risk(graph: nx.DiGraph, user_msg: str) -> Optional[Tuple[str, str]]:
-    """
-    Queries the graph for a risk based on the user's message.
-    Returns a tuple of (description, rationale) if a risk is found.
-    """
-    user_msg_lower = user_msg.strip().lower()
-
-    # Check for risk-related words first for efficiency
-    risk_words = ["문제", "단점", "리스크", "risk", "issue", "disadvantage"]
-    if not any(word in user_msg_lower for word in risk_words):
-        return None
-
-    # Check which concept is being discussed
-    concept_name = None
-    if any(alias in user_msg_lower for alias in graph.nodes["V"].get("aliases", [])):
-        concept_name = "V"
-    elif any(alias in user_msg_lower for alias in graph.nodes["Q"].get("aliases", [])):
-        concept_name = "Q"
-
-    if not concept_name:
-        return None
-
-    # Find the risk node connected to this concept
-    for u, v, data in graph.edges(data=True):
-        if u == concept_name and data.get('type') == 'has_risk':
-            risk_node = graph.nodes.get(v)
-            if risk_node:
-                return risk_node.get('description'), risk_node.get('rationale')
-
-    return None
-
-
-def query_advice(graph: nx.DiGraph, target: str, role: str) -> str:
-    """
-    Queries the graph for advice on a target parameter for a specific role.
-    """
-    target = target.lower()
-    role = role.lower()
-
-    # Map target to concept node name
-    target_map = {
-        "volume": "V",
-        "flow": "Q",
-        "diameter": "D",
-        "height": "H",
-    }
-    concept_name = target_map.get(target)
-    if not concept_name:
-        return ""
-
-    # Find the advice node connected to this concept
-    for u, v, data in graph.edges(data=True):
-        if u == concept_name and data.get('type') == 'has_advice':
-            advice_node = graph.nodes.get(v)
-            if advice_node:
-                return advice_node.get(role, "") # Return advice for the role, or empty string if role not found
-
-    return ""
