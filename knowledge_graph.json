@@ -1,132 +1,157 @@
 {
   "directed": true,
   "multigraph": false,
-  "graph": {},
   "nodes": [
-    {
-      "type": "concept",
-      "description": "EBCT (Empty Bed Contact Time) is the time calculated by dividing the empty volume of the bed by the flow rate. A higher value generally leads to better removal efficiency due to longer contact time.",
-      "rationale": "Formula: EBCT = V/Q (V=bed volume, Q=flow rate; gpm=gal/min).",
-      "aliases": [
-        "ebct",
-        "empty bed contact time"
-      ],
-      "id": "EBCT"
-    },
-    {
-      "type": "concept",
-      "description": "**V** represents the bed volume in gallons (gal). It can be provided directly or calculated from the diameter (D) and height (H) of the bed using the formula V = π·(D/2)²·H, which is then converted to gallons.",
-      "rationale": "V(ft³) = π(D/2)²H; V(gal) = V(ft³) × 7.48052.",
-      "aliases": [
-        "v",
-        "volume",
-        "bed volume",
-        "gal",
-        "gallon"
-      ],
-      "id": "V"
-    },
-    {
-      "type": "concept",
-      "description": "**Q** represents the flow rate. The default unit is gallons per minute (gpm), but it can be automatically converted from L/min or m³/h. Since EBCT = V/Q, increasing Q will decrease EBCT.",
-      "rationale": "1 gpm = 3.785 L/min ≈ 0.2271 m³/h.",
-      "aliases": [
-        "q",
-        "flow",
-        "flow rate",
-        "gpm",
-        "l/min",
-        "m3/h"
-      ],
-      "id": "Q"
-    },
-    {
-      "type": "concept",
-      "aliases": [
-        "d",
-        "diameter",
-        "ft",
-        "in",
-        "m"
-      ],
-      "id": "D"
-    },
-    {
-      "type": "concept",
-      "aliases": [
-        "h",
-        "height",
-        "bed height"
-      ],
-      "id": "H"
-    },
-    {
-      "type": "risk",
-      "description": "Increasing **Volume** linearly increases EBCT, but it also has downsides:\n• Increased cost/footprint (equipment, media, foundation)\n• Pressure drop/hydraulics: Increasing D tends to decrease ΔP, while increasing H tends to increase ΔP\n• Increased backwash water volume and time; requires verification of drainage capacity\n• Longer response time (startup/transition); requires review of handling/replacement cycles",
-      "rationale": "Effect: EBCT↑ (linear). Side effects: Capex/footprint↑, backwash demand↑, ΔP depends on the D/H expansion method.",
-      "id": "V_risk"
-    },
-    {
-      "type": "risk",
-      "description": "Increasing **Flow** increases throughput but decreases EBCT. Additionally:\n• Potential for reduced removal efficiency (less contact time)\n• Increased ΔP, leading to higher pump load and noise\n• Higher risk of uneven distribution and channeling\n• May shorten the backwash cycle",
-      "rationale": "Effect: EBCT↓ (inverse). Superficial velocity↑ → ΔP↑.",
-      "id": "Q_risk"
-    },
-    {
-      "type": "advice",
-      "designer": "Increasing volume extends contact time but also increases equipment size, cost, and backwash water. Consider slightly increasing the diameter or adding parallel vessels as alternatives.",
-      "engineer": "EBCT↑ (linear). Capex/footprint↑, backwash demand↑. Expanding D can mitigate ΔP by lowering U_s, while expanding H increases ΔP. Review parallel/staged options.",
-      "id": "V_advice"
-    },
-    {
-      "type": "advice",
-      "designer": "Raising the flow rate can reduce contact time and lower removal efficiency. Consider increasing the media volume or adding parallel lines instead.",
-      "engineer": "Q↑ → EBCT↓, U_s↑ → ΔP↑, channeling risk↑. Alternatives: V↑, D↑, add parallel units, staged adsorption.",
-      "id": "Q_advice"
-    },
-    {
-      "type": "advice",
-      "designer": "Increasing the diameter significantly raises contact time while also tending to reduce pressure loss. This is a good approach if the installation space allows.",
-      "engineer": "D↑ ⇒ V∝D²·H, U_s↓, ΔP↓ tendency. Verify foundation/nozzle layout.",
-      "id": "D_advice"
-    },
-    {
-      "type": "advice",
-      "designer": "Increasing the bed height raises contact time but can also increase pressure loss. Be sure to check the pump and backwash conditions simultaneously.",
-      "engineer": "H↑ ⇒ V↑, ΔP↑. Verify backwash expansion and pump head margin.",
-      "id": "H_advice"
-    }
+    { "id": "EBCT", "type": "concept", "aliases": ["empty bed contact time","ebct"], "description": "Contact time in empty media bed (minutes)." },
+    { "id": "EBCT_definition", "type": "definition", "description": "Theoretical residence time of water within empty media volume." },
+    { "id": "EBCT_formula", "type": "formula", "description": "EBCT = V / Q (minutes), where V is bed volume and Q is flow rate." },
+
+    { "id": "V", "type": "concept", "aliases": ["volume","bed volume","gal"], "description": "Bed volume (typically gallons)." },
+    { "id": "Q", "type": "concept", "aliases": ["flow","flow rate","gpm","l/min","m3/h"], "description": "Flow rate." },
+    { "id": "D", "type": "concept", "aliases": ["diameter","D"], "description": "Vessel diameter." },
+    { "id": "H", "type": "concept", "aliases": ["height","bed depth","H"], "description": "Media height / bed depth." },
+
+    { "id": "V_risk", "type": "risk", "description": "Too small V → short EBCT → poor removal; increasing V raises footprint/capex and backwash demand." },
+    { "id": "Q_risk", "type": "risk", "description": "High Q → EBCT↓, removal↓, ΔP↑, channeling risk." },
+
+    { "id": "V_advice", "type": "advice", "designer": "Increase diameter or add parallel vessels to extend contact time.", "engineer": "Increase V or reduce Q; verify backwash capacity and headloss." },
+    { "id": "Q_advice", "type": "advice", "designer": "High flow reduces contact time; consider splitting lines.", "engineer": "Throttle/redistribute flow; verify distribution and pump head." },
+    { "id": "D_advice", "type": "advice", "engineer": "V = π(D/2)^2·H; larger D lowers superficial velocity and can reduce ΔP." },
+    { "id": "H_advice", "type": "advice", "engineer": "Higher H increases V but may raise ΔP; check backwash expansion." },
+
+    { "id": "unit_gal",  "type": "unit", "description": "gallon" },
+    { "id": "unit_ft3",  "type": "unit", "description": "ft³" },
+    { "id": "unit_m3",   "type": "unit", "description": "m³" },
+    { "id": "unit_gpm",  "type": "unit", "description": "gallon per minute" },
+    { "id": "unit_Lmin", "type": "unit", "description": "liter per minute" },
+    { "id": "unit_m3h",  "type": "unit", "description": "m³ per hour" },
+    { "id": "unit_ft",   "type": "unit", "description": "ft" },
+    { "id": "unit_m",    "type": "unit", "description": "m" },
+    { "id": "unit_in",   "type": "unit", "description": "inch" },
+
+    { "id": "conv_ft3_to_gal", "type": "conversion", "description": "1 ft³ = 7.48052 gal", "factor": 7.48052, "from": "unit_ft3", "to": "unit_gal" },
+    { "id": "conv_m3_to_gal",  "type": "conversion", "description": "1 m³ = 264.172 gal",  "factor": 264.172, "from": "unit_m3",  "to": "unit_gal" },
+    { "id": "conv_Lmin_to_gpm","type": "conversion", "description": "1 L/min = 0.264172 gpm", "factor": 0.264172, "from": "unit_Lmin", "to": "unit_gpm" },
+    { "id": "conv_m3h_to_gpm", "type": "conversion", "description": "1 m³/h = 4.40288 gpm",  "factor": 4.40288,  "from": "unit_m3h",  "to": "unit_gpm" },
+    { "id": "conv_in_to_ft",   "type": "conversion", "description": "1 in = 0.0833333 ft",  "factor": 0.0833333, "from": "unit_in",  "to": "unit_ft" },
+    { "id": "conv_m_to_ft",    "type": "conversion", "description": "1 m = 3.28084 ft",     "factor": 3.28084,   "from": "unit_m",   "to": "unit_ft" },
+
+    { "id": "PFOA_MCL", "type": "regulation", "description": "PFOA MCL (EPA)", "value": 4.0, "unit": "ng/L" },
+    { "id": "PFOS_MCL", "type": "regulation", "description": "PFOS MCL (EPA)", "value": 4.0, "unit": "ng/L" },
+    { "id": "PFHxS_MCL", "type": "regulation", "description": "PFHxS MCL (EPA)", "value": 10.0, "unit": "ng/L" },
+    { "id": "PFNA_MCL",  "type": "regulation", "description": "PFNA MCL (EPA)",  "value": 10.0, "unit": "ng/L" },
+    { "id": "HFPO-DA_MCL", "type": "regulation", "description": "HFPO-DA (GenX) MCL (EPA)", "value": 10.0, "unit": "ng/L" },
+
+    { "id": "PFOA_MCLG", "type": "reg_value", "description": "MCLG for PFOA", "value": 0.0, "unit": "ng/L" },
+    { "id": "PFOS_MCLG", "type": "reg_value", "description": "MCLG for PFOS", "value": 0.0, "unit": "ng/L" },
+
+    { "id": "PFOA_trigger", "type": "trigger", "description": "Trigger level (½ MCL) for PFOA", "value": 2.0, "unit": "ng/L" },
+    { "id": "PFOS_trigger", "type": "trigger", "description": "Trigger level (½ MCL) for PFOS", "value": 2.0, "unit": "ng/L" },
+    { "id": "PFHxS_trigger", "type": "trigger", "description": "Trigger level (½ MCL) for PFHxS", "value": 5.0, "unit": "ng/L" },
+    { "id": "PFNA_trigger", "type": "trigger", "description": "Trigger level (½ MCL) for PFNA", "value": 5.0, "unit": "ng/L" },
+    { "id": "HFPO-DA_trigger", "type": "trigger", "description": "Trigger level (½ MCL) for HFPO-DA", "value": 5.0, "unit": "ng/L" },
+
+    { "id": "PFOA_PQL", "type": "pql", "description": "PQL for PFOA", "value": 4.0, "unit": "ng/L" },
+    { "id": "PFOS_PQL", "type": "pql", "description": "PQL for PFOS", "value": 4.0, "unit": "ng/L" },
+    { "id": "PFHxS_PQL", "type": "pql", "description": "PQL for PFHxS", "value": 3.0, "unit": "ng/L" },
+    { "id": "PFNA_PQL",  "type": "pql", "description": "PQL for PFNA",  "value": 4.0, "unit": "ng/L" },
+    { "id": "HFPO-DA_PQL", "type": "pql", "description": "PQL for HFPO-DA", "value": 5.0, "unit": "ng/L" },
+
+    { "id": "HI_MCL",  "type": "regulation", "description": "Hazard Index MCL for mixtures (PFHxS, PFNA, HFPO-DA, PFBS)", "value": 1.0, "unit": "unitless" },
+    { "id": "HI_trigger", "type": "trigger", "description": "Hazard Index trigger (½ of HI MCL)", "value": 0.5, "unit": "unitless" },
+
+    { "id": "Effluent_target_PFOA", "type": "target", "description": "Required effluent goal for PFOA", "value": 4.0, "unit": "ng/L" },
+    { "id": "Effluent_target_PFOS", "type": "target", "description": "Required effluent goal for PFOS", "value": 4.0, "unit": "ng/L" },
+    { "id": "EBCT_guideline_PFAS", "type": "advice", "designer": "Stricter PFAS targets generally require longer EBCT and/or staged media.", "engineer": "Tight effluent goals → higher EBCT / series vessels; validate with vendor curves." },
+
+    { "id": "EPA_533", "type": "method", "description": "EPA Method 533 (PFAS)." },
+    { "id": "EPA_537_1_v2", "type": "method", "description": "EPA Method 537.1 v2.0 (PFAS)." },
+    { "id": "EPA_537_1_v1_alt", "type": "method", "description": "EPA Method 537.1 v1.0 (approved alternative for initial monitoring until 2027-04-26)." },
+    { "id": "Certified_labs_required", "type": "milestone", "description": "Only EPA/primacy-certified labs; report to trigger-level LODs.", "date": "2024-06-25" },
+
+    { "id": "Initial_monitoring_due", "type": "milestone", "description": "Initial monitoring results due; compliance monitoring begins.", "date": "2027-04-26" },
+    { "id": "Full_compliance_due",   "type": "milestone", "description": "All systems must comply with PFAS MCLs; PN for MCL violations begins.", "date": "2029-04-26" },
+
+    { "id": "BAT_GAC", "type": "technology", "description": "Granular Activated Carbon (GAC)." },
+    { "id": "BAT_AIX", "type": "technology", "description": "Anion Exchange (AIX)." },
+    { "id": "BAT_RO",  "type": "technology", "description": "Reverse Osmosis (RO)." },
+    { "id": "BAT_NF",  "type": "technology", "description": "Nanofiltration (NF)." },
+
+    { "id": "Design_phase",     "type": "stage", "description": "Sizing, EBCT target setting, vessel selection." },
+    { "id": "Operation_phase",  "type": "stage", "description": "Run-time control, flow balancing, backwash." },
+    { "id": "Monitoring_phase", "type": "stage", "description": "Sampling vs targets; media change criteria." }
   ],
   "links": [
-    {
-      "type": "has_risk",
-      "source": "V",
-      "target": "V_risk"
-    },
-    {
-      "type": "has_advice",
-      "source": "V",
-      "target": "V_advice"
-    },
-    {
-      "type": "has_risk",
-      "source": "Q",
-      "target": "Q_risk"
-    },
-    {
-      "type": "has_advice",
-      "source": "Q",
-      "target": "Q_advice"
-    },
-    {
-      "type": "has_advice",
-      "source": "D",
-      "target": "D_advice"
-    },
-    {
-      "type": "has_advice",
-      "source": "H",
-      "target": "H_advice"
-    }
+    { "source": "EBCT", "target": "EBCT_definition", "type": "has_definition" },
+    { "source": "EBCT", "target": "EBCT_formula",    "type": "has_formula" },
+    { "source": "EBCT", "target": "V", "type": "uses_variable" },
+    { "source": "EBCT", "target": "Q", "type": "uses_variable" },
+    { "source": "V", "target": "D", "type": "derived_from" },
+    { "source": "V", "target": "H", "type": "derived_from" },
+    { "source": "V", "target": "V_risk",   "type": "has_risk" },
+    { "source": "Q", "target": "Q_risk",   "type": "has_risk" },
+    { "source": "V", "target": "V_advice", "type": "has_advice" },
+    { "source": "Q", "target": "Q_advice", "type": "has_advice" },
+    { "source": "D", "target": "D_advice", "type": "has_advice" },
+    { "source": "H", "target": "H_advice", "type": "has_advice" },
+
+    { "source": "V", "target": "unit_gal", "type": "has_unit" },
+    { "source": "V", "target": "unit_ft3", "type": "has_unit" },
+    { "source": "V", "target": "unit_m3",  "type": "has_unit" },
+    { "source": "Q", "target": "unit_gpm", "type": "has_unit" },
+    { "source": "Q", "target": "unit_Lmin","type": "has_unit" },
+    { "source": "Q", "target": "unit_m3h", "type": "has_unit" },
+    { "source": "D", "target": "unit_ft",  "type": "has_unit" },
+    { "source": "D", "target": "unit_m",   "type": "has_unit" },
+    { "source": "D", "target": "unit_in",  "type": "has_unit" },
+    { "source": "H", "target": "unit_ft",  "type": "has_unit" },
+    { "source": "H", "target": "unit_m",   "type": "has_unit" },
+
+    { "source": "unit_ft3",  "target": "unit_gal", "type": "converts_to", "via": "conv_ft3_to_gal" },
+    { "source": "unit_m3",   "target": "unit_gal", "type": "converts_to", "via": "conv_m3_to_gal" },
+    { "source": "unit_Lmin", "target": "unit_gpm", "type": "converts_to", "via": "conv_Lmin_to_gpm" },
+    { "source": "unit_m3h",  "target": "unit_gpm", "type": "converts_to", "via": "conv_m3h_to_gpm" },
+    { "source": "unit_in",   "target": "unit_ft",  "type": "converts_to", "via": "conv_in_to_ft"  },
+    { "source": "unit_m",    "target": "unit_ft",  "type": "converts_to", "via": "conv_m_to_ft"   },
+
+    { "source": "PFOA_MCL", "target": "Effluent_target_PFOA", "type": "sets_target" },
+    { "source": "PFOS_MCL", "target": "Effluent_target_PFOS", "type": "sets_target" },
+    { "source": "Effluent_target_PFOA", "target": "EBCT_guideline_PFAS", "type": "tight_target_requires" },
+    { "source": "Effluent_target_PFOS", "target": "EBCT_guideline_PFAS", "type": "tight_target_requires" },
+    { "source": "EBCT_guideline_PFAS", "target": "EBCT", "type": "recommends_higher" },
+
+    { "source": "PFOA_MCL", "target": "PFOA_MCLG", "type": "has_goal" },
+    { "source": "PFOS_MCL", "target": "PFOS_MCLG", "type": "has_goal" },
+    { "source": "PFOA_MCL", "target": "PFOA_trigger", "type": "has_trigger" },
+    { "source": "PFOS_MCL", "target": "PFOS_trigger", "type": "has_trigger" },
+    { "source": "PFHxS_MCL", "target": "PFHxS_trigger", "type": "has_trigger" },
+    { "source": "PFNA_MCL",  "target": "PFNA_trigger",  "type": "has_trigger" },
+    { "source": "HFPO-DA_MCL", "target": "HFPO-DA_trigger", "type": "has_trigger" },
+    { "source": "PFOA_MCL", "target": "PFOA_PQL", "type": "has_pql" },
+    { "source": "PFOS_MCL", "target": "PFOS_PQL", "type": "has_pql" },
+    { "source": "PFHxS_MCL", "target": "PFHxS_PQL", "type": "has_pql" },
+    { "source": "PFNA_MCL",  "target": "PFNA_PQL",  "type": "has_pql" },
+    { "source": "HFPO-DA_MCL", "target": "HFPO-DA_PQL", "type": "has_pql" },
+
+    { "source": "HI_MCL", "target": "HI_trigger", "type": "has_trigger" },
+
+    { "source": "Certified_labs_required", "target": "EPA_533",        "type": "uses_method" },
+    { "source": "Certified_labs_required", "target": "EPA_537_1_v2",   "type": "uses_method" },
+    { "source": "Certified_labs_required", "target": "EPA_537_1_v1_alt","type": "approved_alt_until" },
+    { "source": "Initial_monitoring_due", "target": "Design_phase",    "type": "affects" },
+    { "source": "Full_compliance_due",   "target": "Operation_phase", "type": "affects" },
+
+    { "source": "PFOA_MCL", "target": "BAT_GAC", "type": "bat" },
+    { "source": "PFOS_MCL", "target": "BAT_GAC", "type": "bat" },
+    { "source": "PFOA_MCL", "target": "BAT_AIX", "type": "bat" },
+    { "source": "PFOS_MCL", "target": "BAT_AIX", "type": "bat" },
+    { "source": "PFOA_MCL", "target": "BAT_RO",  "type": "bat" },
+    { "source": "PFOS_MCL", "target": "BAT_RO",  "type": "bat" },
+    { "source": "PFOA_MCL", "target": "BAT_NF",  "type": "bat" },
+    { "source": "PFOS_MCL", "target": "BAT_NF",  "type": "bat" },
+
+    { "source": "EBCT", "target": "Design_phase",     "type": "used_in" },
+    { "source": "EBCT", "target": "Operation_phase",  "type": "used_in" },
+    { "source": "EBCT", "target": "Monitoring_phase", "type": "used_in" }
   ]
 }

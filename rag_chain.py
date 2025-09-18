@@ -36,73 +36,61 @@ def retrieve(graph: nx.DiGraph, query: str) -> Optional[nx.DiGraph]:
     subgraph = graph.subgraph(subgraph_nodes)
     return subgraph
 
-def format_subgraph_for_prompt(subgraph: nx.DiGraph) -> str:
-    """
-    Formats the subgraph into a string that can be used as context in an LLM prompt.
-    """
+# rag_chain.py
+import time
+
+def format_subgraph_for_prompt(subgraph, max_nodes=12, max_edges=24, max_chars=4000):
     if not subgraph:
         return "No relevant information found in the knowledge graph."
+    nodes = list(subgraph.nodes(data=True))[:max_nodes]
+    keep = {nid for nid,_ in nodes}
+    edges = [(s,t,d) for s,t,d in subgraph.edges(data=True)
+             if s in keep and t in keep][:max_edges]
 
-    context_parts = []
-    context_parts.append("Here is the relevant information from the knowledge graph:")
+    parts = ["Here is the relevant information from the knowledge graph:"]
+    for nid, data in nodes:
+        parts.append(f"\n- Node '{nid}' (Type: {data.get('type','N/A')}):")
+        for k, label in [("description","Description"),
+                         ("rationale","Rationale"),
+                         ("designer","Advice for Designers"),
+                         ("engineer","Advice for Engineers")]:
+            v = data.get(k, "")
+            if v: parts.append(f"  - {label}: {v}")
+    parts.append("\nRelationships:")
+    for s,t,d in edges:
+        parts.append(f"- '{s}' {d.get('type','related to')} '{t}'")
 
-    for node_id, data in subgraph.nodes(data=True):
-        node_type = data.get('type', 'N/A')
-        description = data.get('description', '')
-        rationale = data.get('rationale', '')
-        designer_advice = data.get('designer', '')
-        engineer_advice = data.get('engineer', '')
+    txt = "\n".join(parts)
+    return txt[:max_chars]
 
-        context_parts.append(f"\n- Node '{node_id}' (Type: {node_type}):")
-        if description:
-            context_parts.append(f"  - Description: {description}")
-        if rationale:
-            context_parts.append(f"  - Rationale: {rationale}")
-        if designer_advice:
-            context_parts.append(f"  - Advice for Designers: {designer_advice}")
-        if engineer_advice:
-            context_parts.append(f"  - Advice for Engineers: {engineer_advice}")
-
-    context_parts.append("\nRelationships:")
-    for source, target, data in subgraph.edges(data=True):
-        edge_type = data.get('type', 'related to')
-        context_parts.append(f"- '{source}' {edge_type} '{target}'")
-
-    return "\n".join(context_parts)
 
 def generate_response(query: str, context: str, genai_model) -> str:
     """
-    Generates a conversational response using the provided genai_model object.
+    genai_model: app.py에서 주입하는 OpenAI shim (generate_content(list[str]) 지원)
+    예외/빈응답을 재시도하고, 끝까지 실패하면 짧은 폴백을 반환.
     """
     if not genai_model:
-        return "Sorry, the AI model is not configured."
+        return "Model is not configured."
 
     system_prompt = (
-        "You are an AI assistant for water treatment system design, specifically focusing on EBCT calculations. "
-        "Your role is to be a helpful mediator between designers and engineers. "
-        "Answer the user's question in a conversational and helpful manner, using only the information provided in the context from the knowledge graph. "
-        "Do not make up information. If the context does not contain the answer, say that you don't have enough information. "
-        "Provide your answer in English."
+        "You are a concise assistant for water treatment (EBCT, PFAS). "
+        "Answer ONLY from the provided graph context. If not found, say so. English only."
     )
+    user_prompt = f"--- CONTEXT ---\n{context}\n\n--- QUESTION ---\n{query}\n\nAnswer succinctly."
 
-    user_prompt = (
-        f"Based on the following context, please answer my question.\n\n"
-        f"--- CONTEXT ---\n{context}\n\n"
-        f"--- QUESTION ---\n{query}\n\n"
-        f"--- ANSWER ---\n"
-    )
+    for i in range(3):
+        try:
+            resp = genai_model.generate_content([system_prompt, user_prompt])
+            text = getattr(resp, "text", "") or ""
+            if text.strip():
+                return text.strip()
+            raise RuntimeError("empty_or_blocked")
+        except Exception as e:
+            print(f"[rag_chain.generate_response] attempt {i+1} failed: {e}", flush=True)
+            time.sleep(0.8 * (2 ** i))
 
-    try:
-        resp = genai_model.generate_content(
-            contents=user_prompt,
-            generation_config=types.GenerateContentConfig(
-                system_instruction=system_prompt
-            )
-        )
-        return resp.text.strip()
-    except Exception as e:
-        print(f"[rag_chain.generate_response] error: {e}", flush=True)
-        return "Sorry, an error occurred while generating the response."
+    return "I couldn’t generate an answer right now. Please try again in a moment."
+
 
 def execute_rag_chain(graph: nx.DiGraph, query: str, genai_model) -> Dict[str, Any]:
     """

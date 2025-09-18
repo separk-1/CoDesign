@@ -101,6 +101,13 @@
       <input id="q" placeholder="Ask a question…" />
       <button id="send" type="button">Send</button>
     </div>
+
+    <div id="kg-tooltip" style="
+      position:fixed; pointer-events:none; z-index:1000; display:none;
+      max-width:360px; padding:10px 12px; background:#111; color:#fff;
+      border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,.25); font:13px/1.4 system-ui;
+    "></div>
+
   </div>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js"></script>
