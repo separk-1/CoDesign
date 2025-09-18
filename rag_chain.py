@@ -1,5 +1,6 @@
 import networkx as nx
 from typing import List, Dict, Any, Optional
+from google.generativeai import types
 
 def retrieve(graph: nx.DiGraph, query: str) -> Optional[nx.DiGraph]:
     """
@@ -92,7 +93,12 @@ def generate_response(query: str, context: str, genai_model) -> str:
     )
 
     try:
-        resp = genai_model.generate_content([system_prompt, user_prompt])
+        resp = genai_model.generate_content(
+            contents=user_prompt,
+            generation_config=types.GenerateContentConfig(
+                system_instruction=system_prompt
+            )
+        )
         return resp.text.strip()
     except Exception as e:
         print(f"[rag_chain.generate_response] error: {e}", flush=True)

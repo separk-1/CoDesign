@@ -144,19 +144,22 @@ document.addEventListener('DOMContentLoaded', () => {
       const height = $graphContainer.offsetHeight || 600;
       const svg = d3.select("#knowledge-graph").html("").attr("width", width).attr("height", height);
 
+      // Create a container for all zoomable elements
+      const g = svg.append("g");
+
       const simulation = d3.forceSimulation(graphData.nodes)
         .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(100))
         .force("charge", d3.forceManyBody().strength(-300))
         .force("center", d3.forceCenter(width / 2, height / 2));
 
-      const link = svg.append("g")
+      const link = g.append("g")
         .attr("stroke", "#999")
         .attr("stroke-opacity", 0.6)
         .selectAll("line")
         .data(graphData.links)
         .join("line");
 
-      const node = svg.append("g")
+      const node = g.append("g")
         .attr("stroke", "#fff")
         .attr("stroke-width", 1.5)
         .selectAll("circle")
@@ -175,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
           .on("drag", dragged)
           .on("end", dragended));
 
-      const text = svg.append("g")
+      const text = g.append("g")
         .selectAll("text")
         .data(graphData.nodes)
         .join("text")
@@ -202,6 +205,12 @@ document.addEventListener('DOMContentLoaded', () => {
           .attr("x", d => d.x + 12)
           .attr("y", d => d.y);
       });
+
+      // Zoom functionality
+      const zoom = d3.zoom().on("zoom", (event) => {
+        g.attr("transform", event.transform);
+      });
+      svg.call(zoom);
 
       function dragstarted(event, d) {
         if (!event.active) simulation.alphaTarget(0.3).restart();
