@@ -92,58 +92,62 @@ def compute_from_used(used: Dict[str, Any]):
         return V_gal / Q
     return None
 
-# ---------- 역할별 톤 & 조언 ----------
-def tone(reply: str, role: str) -> str:
-    role = (role or "").lower()
-    if role == "designer":
-        return reply.replace("≈", "약 ").replace("EBCT", "접촉시간(EBCT)")
-    return reply  # engineer는 원문 유지
-
 import rag_chain
 
-# ----------------- 대화형 API (RAG-based) -----------------
+# ----------------- 대화형 API (Hybrid) -----------------
 @app.post("/api/chat")
 def chat():
     """
-    Handles chat messages using the GraphRAG chain.
-    body: { messages:[{role,content}...], state:{ role: 'designer'|'engineer', used: dict|null } }
+    Handles chat messages using a hybrid approach:
+    1. First, attempts a direct calculation.
+    2. If that fails, uses the GraphRAG chain for a conceptual answer.
     """
     data = request.get_json(silent=True) or {}
     messages = data.get("messages") or []
     state = data.get("state") or {}
-    role = (state.get("role") or "designer")
 
     if not messages:
         return jsonify({"error": "No messages"}), 400
     user_msg = messages[-1].get("content") or ""
 
     try:
-        # Always try to perform a calculation first to ground the conversation
-        # This can be used by the UI to display current numbers.
+        # 1. Attempt direct calculation
+        calc_result = None
         try:
             calc_result = compute_ebct(user_msg)
-            if not isinstance(calc_result, dict) or "minutes" not in calc_result:
+            # Ensure the result is valid and contains the 'minutes' key
+            if not (isinstance(calc_result, dict) and calc_result.get("ok")):
                 calc_result = None
         except Exception:
             calc_result = None
 
-        # Execute the RAG chain to get a conversational response
+        # If calculation is successful, return a direct response
+        if calc_result:
+            minutes = calc_result.get("minutes")
+            used_new = calc_result.get("detail", {}).get("units_normalized", {})
+            response_payload = {
+                "reply": f"Based on the provided values, the calculated EBCT is approximately {_num(minutes)} minutes.",
+                "rationale": "Direct calculation performed.",
+                "calc": {
+                    "minutes": _num(minutes),
+                    "used": used_new
+                }
+            }
+            return jsonify(response_payload), 200
+
+        # 2. If calculation fails, fall back to GraphRAG
         rag_result = rag_chain.execute_rag_chain(G, user_msg, _genai_model)
 
-        # Combine results
-        reply = rag_result.get("reply", "No response from RAG chain.")
-        rationale = rag_result.get("rationale", "")
-
-        # The 'used' state should be updated based on the latest successful calculation
-        used_new = (calc_result.get("detail", {}).get("units_normalized") or {}) if calc_result and calc_result.get("ok") else state.get("used", {})
-        minutes_new = calc_result.get("minutes") if calc_result and calc_result.get("ok") else _num(compute_from_used(used_new))
+        # The 'used' state for a RAG response should be the last known state
+        used_state = state.get("used", {})
+        minutes_state = _num(compute_from_used(used_state))
 
         response_payload = {
-            "reply": tone(reply, role),
-            "rationale": tone(rationale, role),
+            "reply": rag_result.get("reply", "Sorry, I could not process that request."),
+            "rationale": rag_result.get("rationale", ""),
             "calc": {
-                "minutes": _num(minutes_new),
-                "used": used_new
+                "minutes": minutes_state,
+                "used": used_state
             }
         }
 
@@ -151,7 +155,7 @@ def chat():
 
     except Exception as e:
         tb = traceback.format_exc()
-        print("[/api/chat] error:", e, "\n", tb, flush=True)
+        print(f"[/api/chat] error: {e}\n{tb}", flush=True)
         return jsonify({"error": str(e)}), 500
 
 # ----------------- Graph Management APIs -----------------

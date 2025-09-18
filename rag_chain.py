@@ -74,21 +74,21 @@ def generate_response(query: str, context: str, genai_model) -> str:
     Generates a conversational response using the provided genai_model object.
     """
     if not genai_model:
-        return "죄송합니다, AI 모델이 설정되지 않았습니다."
+        return "Sorry, the AI model is not configured."
 
     system_prompt = (
         "You are an AI assistant for water treatment system design, specifically focusing on EBCT calculations. "
         "Your role is to be a helpful mediator between designers and engineers. "
         "Answer the user's question in a conversational and helpful manner, using only the information provided in the context from the knowledge graph. "
         "Do not make up information. If the context does not contain the answer, say that you don't have enough information. "
-        "Provide your answer in Korean."
+        "Provide your answer in English."
     )
 
     user_prompt = (
         f"Based on the following context, please answer my question.\n\n"
         f"--- CONTEXT ---\n{context}\n\n"
         f"--- QUESTION ---\n{query}\n\n"
-        f"--- ANSWER (in Korean) ---\n"
+        f"--- ANSWER ---\n"
     )
 
     try:
@@ -96,7 +96,7 @@ def generate_response(query: str, context: str, genai_model) -> str:
         return resp.text.strip()
     except Exception as e:
         print(f"[rag_chain.generate_response] error: {e}", flush=True)
-        return "죄송합니다, 답변을 생성하는 중에 오류가 발생했습니다."
+        return "Sorry, an error occurred while generating the response."
 
 def execute_rag_chain(graph: nx.DiGraph, query: str, genai_model) -> Dict[str, Any]:
     """
@@ -106,7 +106,7 @@ def execute_rag_chain(graph: nx.DiGraph, query: str, genai_model) -> Dict[str, A
     subgraph = retrieve(graph, query)
     if not subgraph:
         return {
-            "reply": "관련 정보를 찾지 못했어요. 'EBCT', 'volume', 'flow' 같은 키워드를 사용해 질문해 주시겠어요?",
+            "reply": "I couldn't find any relevant information for that. Could you try asking about 'EBCT', 'volume', or 'flow'?",
             "rationale": "No relevant nodes found in knowledge graph."
         }
 

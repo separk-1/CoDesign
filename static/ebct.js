@@ -35,9 +35,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $roleBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      state.role = btn.dataset.role;
+      const role = btn.dataset.role;
+      if (!role) return; // Should not happen for role buttons
+      state.role = role;
       $roleHint.textContent = state.role === 'designer' ? 'Designer mode – plain language, alternatives first.' : 'Engineer mode – numbers, units, assumptions.';
-      bubble('bot', state.role === 'designer' ? '디자이너 모드로 도와드릴게요. 무엇이 걱정되세요?' : '엔지니어 모드입니다. 기준/가정부터 알려주세요.');
+
+      // Update button styles
+      $roleBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      bubble('bot', state.role === 'designer' ? 'Designer mode activated. How can I help you today?' : 'Engineer mode activated. Please provide the baseline parameters.');
       $q.focus();
     });
   });
@@ -46,12 +53,13 @@ document.addEventListener('DOMContentLoaded', () => {
   $dbBtn.addEventListener('click', async () => {
     graphVisible = !graphVisible;
     $dbBtn.setAttribute('aria-pressed', graphVisible);
+    $dbBtn.classList.toggle('active', graphVisible);
     
     $chat.style.display = graphVisible ? 'none' : 'flex';
     $graphContainer.style.display = graphVisible ? 'block' : 'none';
 
     if (graphVisible) {
-      $q.placeholder = '그래프를 드래그하여 탐색하세요.';
+      $q.placeholder = 'Drag the graph to explore.';
       renderGraph();
     } else {
       $q.placeholder = 'Ask a question…';
@@ -62,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const text = ($q.value || '').trim();
     if (!text) return;
     if (!state.role) { 
-        bubble('bot', '먼저 상단에서 역할을 선택해 주세요 (Designer / Engineer).'); 
+        bubble('bot', 'Please select your role (Designer / Engineer) first.');
         return; 
     }
 
@@ -70,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
     messages.push({ role: 'user', content: text });
     bubble('user', esc(text));
 
-    const loadingText = plainText('답변을 생성 중입니다...', 'loading-text');
+    const loadingText = plainText('Generating response...', 'loading-text');
 
     try {
       const res = await fetch('/api/chat', {
@@ -153,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (d.type === 'advice') return '#facc15';
           return '#64748b';
         })
+        .style("cursor", "pointer")
         .call(d3.drag()
           .on("start", dragstarted)
           .on("drag", dragged)
@@ -164,8 +173,12 @@ document.addEventListener('DOMContentLoaded', () => {
         .join("text")
         .attr("x", 12)
         .attr("y", "0.31em")
+        .style("font-size", "14px")
+        .style("fill", "#333")
         .text(d => d.id)
         .clone(true).lower()
+        .attr("stroke-linejoin", "round")
+        .attr("stroke-width", 3)
         .attr("stroke", "white");
 
       simulation.on("tick", () => {
