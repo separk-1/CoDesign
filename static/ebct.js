@@ -102,12 +102,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const reply = data.reply || '(no reply)';
       bubble('bot', reply);
-      if (data.rationale) {
-          const rationaleHtml = converter.makeHtml(data.rationale);
-          const rationaleBubble = document.createElement('div');
-          rationaleBubble.className = 'bubble bot';
-          rationaleBubble.innerHTML = `<span class="muted">${rationaleHtml}</span>`;
-          $chat.appendChild(rationaleBubble);
+      if (data.rationale && data.rationale !== "Direct calculation performed.") {
+          const rationaleDetails = document.createElement('details');
+          rationaleDetails.className = 'bubble bot muted';
+
+          const summary = document.createElement('summary');
+          summary.textContent = 'Show technical rationale';
+          rationaleDetails.appendChild(summary);
+
+          const rationaleContent = document.createElement('div');
+          rationaleContent.style.marginTop = '10px';
+          rationaleContent.innerHTML = converter.makeHtml(data.rationale);
+          rationaleDetails.appendChild(rationaleContent);
+
+          $chat.appendChild(rationaleDetails);
           $chat.scrollTop = $chat.scrollHeight;
       }
 
@@ -228,5 +236,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  bubble('bot', "나는 디자이너/엔지니어 중 무엇인가요? 상단에서 선택해 주세요.\n기준 예) 'flow 800 gpm, bed volume 9600 gal'\n질문 예) '이거 10% 올려도 돼?', 'what flow for 15 min'");
+  bubble('bot', "Please select your role (Designer / Engineer) to begin.\n\nExample baseline: 'flow 800 gpm, bed volume 9600 gal'\nExample questions: 'what if I increase volume by 10%?', 'what flow is needed for 15 min ebct?'");
 });

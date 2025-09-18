@@ -10,7 +10,6 @@ import networkx as nx
 # .env 로드 (명시 경로로 안전하게)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
-print("Gemini key loaded?", bool(os.getenv("GEMINI_API_KEY")), flush=True)
 
 # 결정론적 EBCT 계산기 (너의 파서/계산)
 from calculator import compute_ebct
