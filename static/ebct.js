@@ -33,6 +33,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return p;
   };
 
+  const dbBtn = document.getElementById("db-btn");
+  const graphContainer = document.getElementById("graph-container");
+
+  dbBtn.addEventListener("click", () => {
+    const isActive = dbBtn.classList.toggle("active");
+    dbBtn.setAttribute("aria-pressed", isActive ? "true" : "false");
+    graphContainer.style.display = isActive ? "block" : "none";
+  });
+
+
   $roleBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       state.role = btn.dataset.role;

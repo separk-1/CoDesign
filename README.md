@@ -3,50 +3,50 @@
 
 ---
 
-## 🔗 Live Demo
-Vercel deployment: [codesign-ten.vercel.app](https://codesign-ten.vercel.app)
+## 🚀 Run Locally
 
----
+Since Vercel’s serverless function size limits are not compatible with this project, you should run it locally.
 
-## 🚀 Setup & Run
-
-### 1. Setup with a single command
-On Mac/Linux you can simply run:
-
+### 1. Clone the repository
 ```bash
-sh setup.sh
+git clone https://github.com/separk-1/CoDesign.git
+cd CoDesign
 ```
 
-This will create a virtual environment, activate it, and install all required dependencies.
+### 2. Create virtual environment and install dependencies
+```bash
+python -m venv .venv
+source .venv/bin/activate   # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
 
----
+### 3. Configure environment (optional)
+Copy `.env.example` to `.env` and set environment variables if needed (e.g., `PORT`).
 
-### 2. Configure environment (optional)
-Copy `.env.example` to `.env` and set environment variables such as `PORT` if needed.
-
----
-
-### 3. Run the server
-Start the Flask backend:
-
+### 4. Run the Flask server
 ```bash
 python app.py
 ```
 
-By default, the server runs at [http://127.0.0.1:5000](http://127.0.0.1:5000).
+The server will start at [http://127.0.0.1:5001](http://127.0.0.1:5001) by default【124†source】.
 
----
+### 5. Open the UI
+Open `index.html` in your browser, or simply navigate to the server root:
 
-### 4. Open in browser
-Navigate to the server’s address in your browser to use the app.
+```
+http://127.0.0.1:5001/
+```
+
+This will show the EBCT Chat UI, where you can interact with the app.
 
 ---
 
 ## 💡 Usage Examples
 Enter natural language queries:
 
-- `EBCT? flow 800 gpm, bed volume 9600 gal`  
+- `flow 800 gpm, bed volume 9600 gal`
 - `Tank diameter 10 ft, bed height 8 ft, flow 900 gpm`
+- `what flow for 15 min`
 
 ---
 
